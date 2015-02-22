@@ -14,7 +14,8 @@ TARGET = harbour-speiseplan
 
 CONFIG += sailfishapp
 
-SOURCES += src/harbour-speiseplan.cpp
+SOURCES += src/harbour-speiseplan.cpp \
+    src/parserbase.cpp
 
 OTHER_FILES += qml/harbour-speiseplan.qml \
     qml/cover/CoverPage.qml \
@@ -30,4 +31,7 @@ OTHER_FILES += qml/harbour-speiseplan.qml \
 # following CONFIG line
 CONFIG += sailfishapp_i18n
 TRANSLATIONS += translations/harbour-speiseplan-de.ts
+
+HEADERS += \
+    src/parserbase.h
 

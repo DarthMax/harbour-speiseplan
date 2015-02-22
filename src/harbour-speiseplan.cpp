@@ -33,6 +33,7 @@
 #endif
 
 #include <sailfishapp.h>
+#include "parserbase.h"
 
 
 int main(int argc, char *argv[])
@@ -46,6 +47,11 @@ int main(int argc, char *argv[])
     //
     // To display the view, call "show()" (will show fullscreen on device).
 
-    return SailfishApp::main(argc, argv);
+    //return SailfishApp::main(argc, argv);
+
+    ParserBase parser();
+    parser.getSiteContent();
+
+    return(0);
 }
 
