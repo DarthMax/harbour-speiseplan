@@ -47,11 +47,13 @@ int main(int argc, char *argv[])
     //
     // To display the view, call "show()" (will show fullscreen on device).
 
-    //return SailfishApp::main(argc, argv);
+    QScopedPointer<QGuiApplication> app(SailfishApp::application(argc, argv));
 
-    ParserBase parser();
+    ParserBase parser;
     parser.getSiteContent();
 
-    return(0);
+    app->exec();
+
+    return 0;
 }
 

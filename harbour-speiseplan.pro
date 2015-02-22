@@ -12,7 +12,9 @@
 # The name of your application
 TARGET = harbour-speiseplan
 
-CONFIG += sailfishapp
+QT += core network
+
+CONFIG += sailfishapp debug
 
 SOURCES += src/harbour-speiseplan.cpp \
     src/parserbase.cpp
