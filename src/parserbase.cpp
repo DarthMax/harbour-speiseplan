@@ -1,20 +1,14 @@
 ﻿#include "parserbase.h"
 
-#include <QDomDocument>
-#include <QDomNodeList>
-
 #include <QRegExp>
-
-#include <QtXml>
-#include <QtXmlPatterns/QXmlQuery>
 
 #include <QDebug>
 
 ParserBase::ParserBase(QObject *parent)
     : QObject(parent)
+    , m_obererSaalModel(new MenuModel)
     , m_url("http://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-unicampus/")
 {
-
 }
 
 void ParserBase::getSiteContent()
@@ -48,23 +42,32 @@ void ParserBase::networkReplyFinishedSlot(QNetworkReply* reply)
 
 bool ParserBase::calcSubstringBorders(int & begin, int & end, QString beginString, QString endString, QString contentString, int startPos)
 {
+    // look for first searchString aka \beginString
     begin  = contentString.indexOf(beginString, startPos);
-    begin += beginString.length();
-    end    = contentString.indexOf(endString, startPos+beginString.length());
-
-    if (begin < end)
+    if (begin == -1)
     {
-        return true;
+        return false;
     }
 
-    return false;
+    // set begin position to "inner border" (we don't want to have the \beginString in the resulting middle)
+    begin += beginString.length();
+    if (begin >= contentString.length())
+    {
+        return false;
+    }
+
+    // look for second searchString aka \endString
+    end = contentString.indexOf(endString, begin);
+    if (end == -1)
+    {
+        return false;
+    }
+
+    return true;
 }
 
 void ParserBase::parseHTML(QString const & content)
 {
-    Menu speiseplanObererSaal;
-
-
     int begin(0);
     int end(0);
 
@@ -73,16 +76,15 @@ void ParserBase::parseHTML(QString const & content)
     QString currentMenu = content.mid(begin, end-begin);
 
     // one menu
+    Menu menuObererSaal;
     {
         // get date
         calcSubstringBorders(begin, end, "<td colspan='3'>", "</td></tr>", currentMenu);
-        QString date = currentMenu.mid(end-10, 10); //< we have format "dd.mm.yyyy", so a fixed count of 10 chars
+        QString date = currentMenu.mid(end-10, 10); //< we have format "dd.MM.yyyy", so a fixed count of 10 chars
+        menuObererSaal.day = QDate::fromString(date, "dd.MM.yyyy");
 
-
-        qDebug() << "currentMenu=" << currentMenu;
-        qDebug() << "date=" << date;
-
-        // TODO! Fix loop ... (first item occures two times!)
+//        qDebug() << "currentMenu=" << currentMenu;
+        qDebug() << "date=" << date;        
 
         bool lastElement(false);
         int currentPos(0);
@@ -93,7 +95,7 @@ void ParserBase::parseHTML(QString const & content)
 
         do
         {
-            //get food name, separeted by <tr>...</tr>
+            //get food name, separated by <tr>...</tr>
             if (!calcSubstringBorders(begin, end, "<tr><td style='width:64%;'>", "</td></tr>", currentMenu, currentPos))
             {
                 lastElement = true;
@@ -106,17 +108,106 @@ void ParserBase::parseHTML(QString const & content)
             currentPos = end;
 
             //get food name
-            calcSubstringBorders(begin, end, "<strong>","<br /><span class='grau'>", currentFoodLine);
+            if (!calcSubstringBorders(begin, end, "<strong>","<br /><span class='grau'>", currentFoodLine))
+            {
+                continue;
+            }
             foodName = currentFoodLine.mid(begin, end-begin);
 
             // get price
-            calcSubstringBorders(begin, end, "</strong><br />"," |", currentFoodLine);
+            if (!calcSubstringBorders(begin, end, "</strong><br />"," |", currentFoodLine))
+            {
+                continue;
+            }
             price = currentFoodLine.mid(begin, end-begin); //< hard coded 'student price'
 
             qDebug() << "currentPos=" << currentPos;
             qDebug() << "foodName=" << foodName;
             qDebug() << "price=" << price;
 
+            // save food-entry
+            Food currentFood(foodName, QString(""), price);
+            menuObererSaal.foodList << currentFood;
         } while( !lastElement );
+
+        qDebug() << "FoodList of ObererSaal contains " << menuObererSaal.foodList.size() << " entries.";
     }
+    m_obererSaalModel->setFoodList(menuObererSaal.foodList);
+
+    QModelIndex modelIndex = m_obererSaalModel->index(0);
+    qDebug() << "m_obererSaalModel at index 0 = " << m_obererSaalModel->data( modelIndex, Qt::DisplayRole );
+}
+
+
+//---------------------------------------------------------------------
+
+
+MenuModel::MenuModel(QObject * parent)
+    :QAbstractListModel(parent)
+{
+}
+
+void MenuModel::setFoodList(QList<Food> & list)
+{
+    if(!foodList.empty())
+    {
+        beginRemoveRows(QModelIndex(),0,foodList.size() - 1);
+        foodList.clear();
+        endRemoveRows();
+    }
+
+    int counter = 0;
+    foreach(Food food, list)
+    {
+        beginInsertRows(QModelIndex(), counter, counter);
+        foodList.push_back(food);
+        endInsertRows();
+
+        QModelIndex index = createIndex(counter, counter);
+
+        emit dataChanged(index, index);
+    }
+}
+
+int MenuModel::rowCount(const QModelIndex & /* parent */) const
+{
+    return foodList.count();
+}
+
+QVariant MenuModel::data(const QModelIndex &index, int role) const
+{
+    if (!index.isValid())
+        return QVariant();
+
+    return foodList.at(index.row()).name;
+}
+
+bool MenuModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+    if(value.toString().isEmpty())
+    {
+        return false;
+    }
+
+    beginInsertRows(index, 0, 0);
+    foodList.append(Food(value.toString(),"",""));
+    endInsertRows();
+
+    emit dataChanged(index, index);
+
+    return true;
+}
+
+QHash<int, QByteArray> MenuModel::roleNames() const
+{    
+    QHash<int, QByteArray> hash;
+    hash[Qt::DisplayRole] = "content";
+    return hash;
+}
+
+Qt::ItemFlags MenuModel::flags(const QModelIndex &index) const
+{
+    Qt::ItemFlags flags = QAbstractItemModel::flags(index);
+    flags |= Qt::ItemIsEditable;
+    return flags;
 }

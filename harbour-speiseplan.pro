@@ -21,7 +21,7 @@ SOURCES += src/harbour-speiseplan.cpp \
 
 OTHER_FILES += qml/harbour-speiseplan.qml \
     qml/cover/CoverPage.qml \
-    qml/pages/FirstPage.qml \
+    qml/pages/FoodList.qml \
     qml/pages/SecondPage.qml \
     rpm/harbour-speiseplan.changes.in \
     rpm/harbour-speiseplan.spec \

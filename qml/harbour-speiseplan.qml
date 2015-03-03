@@ -34,7 +34,29 @@ import "pages"
 
 ApplicationWindow
 {
-    initialPage: Component { FirstPage { } }
+    initialPage: SilicaListView {
+        id: listView
+        model: entryListModel
+        anchors.fill: parent
+
+        header: PageHeader {
+            title: qsTr(header)
+        }
+
+        delegate: ListItem {
+            id: foodModelDelegate
+            Label {
+                id: entry
+                text: content
+                anchors {left: parent.left; right: parent.right}
+                anchors.margins: Theme.paddingMedium
+                color: Theme.primaryColor
+            }
+        }
+
+        VerticalScrollDecorator {}
+    }
+
     cover: Qt.resolvedUrl("cover/CoverPage.qml")
 }
 

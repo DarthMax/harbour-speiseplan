@@ -32,7 +32,10 @@
 #include <QtQuick>
 #endif
 
+#include <QModelIndex>
+#include <QDebug>
 #include <sailfishapp.h>
+
 #include "parserbase.h"
 
 
@@ -48,12 +51,20 @@ int main(int argc, char *argv[])
     // To display the view, call "show()" (will show fullscreen on device).
 
     QScopedPointer<QGuiApplication> app(SailfishApp::application(argc, argv));
+    QScopedPointer<QQuickView> view(SailfishApp::createView());
 
     ParserBase parser;
     parser.getSiteContent();
 
-    app->exec();
+    QModelIndex modelIndex = parser.m_obererSaalModel->index(0);
+    qDebug() << "m_obererSaalModel (in main) at 0 = " << parser.m_obererSaalModel->data(modelIndex, Qt::DisplayRole).toString();
 
-    return 0;
+    QUrl qmlPath(SailfishApp::pathTo("qml/harbour-speiseplan.qml"));
+    view.data()->rootContext()->setContextProperty("entryListModel", parser.m_obererSaalModel);
+    view.data()->rootContext()->setContextProperty("header", QString("Speiseplan"));
+    view.data()->setSource(qmlPath);
+    view->show();
+
+    return app->exec();
 }
 
